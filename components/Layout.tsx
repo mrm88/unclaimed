@@ -1,13 +1,14 @@
-import React from 'react';
-import { User, LogOut, CreditCard, Settings, Star } from 'lucide-react';
+import React from 'react'
+import { User, LogOut, CreditCard, Settings, Star } from 'lucide-react'
 
 interface LayoutProps {
-  children: React.ReactNode;
+  children: React.ReactNode
   user?: {
-    email: string;
-    subscription_status: string;
-  } | null;
-  onLogout?: () => void;
+    id: string
+    email: string
+    subscription_tier: 'free' | 'premium'
+  } | null
+  onLogout?: () => void
 }
 
 export default function Layout({ children, user, onLogout }: LayoutProps) {
@@ -35,12 +36,12 @@ export default function Layout({ children, user, onLogout }: LayoutProps) {
                     <div className="hidden sm:block">
                       <p className="text-sm font-medium text-gray-900">{user.email}</p>
                       <p className="text-xs text-gray-500">
-                        {user.subscription_status === 'premium' ? 'Premium Member' : 'Free Account'}
+                        {user.subscription_tier === 'premium' ? 'Premium Member' : 'Free Account'}
                       </p>
                     </div>
                   </div>
                   
-                  {user.subscription_status === 'premium' && (
+                  {user.subscription_tier === 'premium' && (
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 border border-yellow-300">
                       <Star className="h-3 w-3 mr-1" />
                       Premium
@@ -98,5 +99,5 @@ export default function Layout({ children, user, onLogout }: LayoutProps) {
         </div>
       </footer>
     </div>
-  );
+  )
 }
