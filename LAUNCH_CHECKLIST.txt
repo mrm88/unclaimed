@@ -1,0 +1,184 @@
+ 🚀 UNCLAIMED APP - PRODUCTION DEPLOYMENT PACKAGE
+
+  1. ✅ Complete .env.example
+
+  # Google OAuth Configuration
+  NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
+  GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+  # JWT Secret for session management
+  JWT_SECRET=your_jwt_secret_key_min_32_chars
+
+  # Stripe Configuration
+  STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+  STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
+  STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+
+  # Supabase Configuration
+  NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+  SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+  # Application Configuration
+  NEXT_PUBLIC_BASE_URL=http://localhost:3000
+  SHARE_SECRET=your_share_secret_key_min_32_chars
+
+  2. ✅ Launch Checklist
+
+  A. Local Development Setup
+
+  # 1. Install dependencies
+  npm install
+
+  # 2. Copy env and fill with your credentials
+  cp .env.example .env.local
+
+  # 3. Set up Supabase database (run SQL from supabase/schema.sql in Supabase dashboard)
+
+  # 4. Run development server
+  npm run dev
+
+  B. Google OAuth Setup
+
+  1. Go to https://console.cloud.google.com
+  2. Create new project or select existing
+  3. Enable Gmail API
+  4. Create OAuth 2.0 credentials:
+    - Application type: Web application
+    - Authorized redirect URIs:
+        - http://localhost:3000/api/auth/google/callback (dev)
+      - https://your-domain.vercel.app/api/auth/google/callback (prod)
+  5. Copy Client ID and Client Secret to .env
+
+  C. Supabase Setup
+
+  1. Create account at https://supabase.com
+  2. Create new project
+  3. Go to SQL Editor and run the entire /supabase/schema.sql file
+  4. Get credentials from Settings > API:
+    - NEXT_PUBLIC_SUPABASE_URL: Project URL
+    - NEXT_PUBLIC_SUPABASE_ANON_KEY: anon/public key
+    - SUPABASE_SERVICE_ROLE_KEY: service_role key (keep secret!)
+
+  D. Stripe Setup
+
+  1. Create account at https://stripe.com
+  2. Get API keys from Dashboard > Developers > API keys
+  3. Set up webhook:
+    - Go to Developers > Webhooks
+    - Add endpoint: https://your-domain.vercel.app/api/stripe/webhook
+    - Select events: checkout.session.completed
+    - Copy webhook signing secret
+
+  3. ✅ Vercel Deployment
+
+  # 1. Install Vercel CLI
+  npm i -g vercel
+
+  # 2. Deploy
+  vercel
+
+  # 3. Set environment variables in Vercel dashboard
+  # Project Settings > Environment Variables
+  # Add all variables from .env.example
+
+  Important Vercel Settings:
+
+  - Framework Preset: Next.js
+  - Build Command: npm run build
+  - Output Directory: .next
+
+  4. ✅ Key Backend Flows Explained
+
+  A. Gmail Scanning Flow
+
+  1. User clicks "Connect Gmail" → /api/auth/google
+  2. Google OAuth → /api/auth/google/callback
+  3. Store tokens in JWT cookie + Supabase user record
+  4. Frontend calls /api/gmail/scan with JWT
+  5. Backend uses tokens to search Gmail for reward emails
+  6. Parse emails with regex patterns (no mock data!)
+  7. Return real results or empty array
+
+  B. Stripe Unlock Flow
+
+  1. User clicks "Pay $9" → /api/stripe/create-checkout
+  2. Create Stripe session with user email
+  3. Redirect to Stripe checkout
+  4. On success → webhook /api/stripe/webhook
+  5. Verify webhook signature
+  6. Update Supabase: user.unlocked = true, unlock_method = 'paid'
+  7. User redirected back to app
+
+  C. Share-Based Unlock Flow
+
+  1. Frontend calls GET /api/share-verify for token
+  2. User shares with token in URL
+  3. After share, call POST /api/share-verify with token
+  4. Verify token hasn't expired (30 min)
+  5. Update Supabase: user.unlocked = true, unlock_method = 'shared'
+
+  D. Unlock Status Verification
+
+  1. Frontend calls /api/unlock-status on page load
+  2. Verify JWT from cookie
+  3. Check user.unlocked in Supabase
+  4. Return true/false (server-side truth)
+  5. No more URL param bypass!
+
+  5. ✅ Files to Delete/Audit Before Launch
+
+  DELETE These Files:
+
+  # Duplicate/unused files
+  rm lib/gmail-auth.ts  # Using gmail-service.ts instead
+  rm lib/database.ts    # Replaced by Supabase
+
+  # Unused API routes
+  rm pages/api/rewards/index.ts
+  rm pages/api/rewards/scan.ts
+  rm pages/api/rewards/export.ts
+
+  AUDIT These Files:
+
+  # Remove mock data generation
+  lib/gmail-service.ts  # Remove generateMockReward() function
+  components/LockedDashboardPreview.tsx  # Remove hardcoded preview data
+
+  # Update to use server-side unlock check
+  app/page.tsx  # Replace URL param checks with API calls
+  components/ShareToUnlockButton.tsx  # Use share token API
+
+  Frontend Updates Needed:
+
+  1. app/page.tsx:
+    - Remove ?unlocked=true URL checks
+    - Call /api/unlock-status on mount
+    - Update share flow to use tokens
+  2. components/ShareToUnlockButton.tsx:
+    - Get share token from API
+    - Verify share server-side
+  3. pages/api/stripe/create-checkout.ts:
+    - Add email to Stripe session metadata
+
+  🎯 Critical Security Checklist:
+
+  - All .env secrets are 32+ chars
+  - Supabase RLS policies are enabled
+  - Stripe webhook endpoint is verified
+  - No mock data in production
+  - URL params don't control unlock state
+  - Share tokens expire in 30 minutes
+  - JWT tokens expire in 24 hours
+
+  🚨 Testing Before Launch:
+
+  1. Test Gmail auth flow end-to-end
+  2. Make test Stripe payment ($0.50 in test mode)
+  3. Verify webhook updates Supabase
+  4. Test share unlock with real social post
+  5. Verify unlock persists on page refresh
+  6. Check that ?unlocked=true doesn't bypass
+
+  Once deployed, monitor Supabase logs and Stripe webhook events to ensure everything is working correctly!
+
